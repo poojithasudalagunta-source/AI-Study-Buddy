@@ -1,24 +1,90 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>AI Study Buddy – Flip Card</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Study Buddy – Grand Maestro Edition</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <style>
+:root {
+    --bg: linear-gradient(135deg, #878c9e, #444446);
+    --card-bg: #c7cfb0;
+    --text: #000;
+    --btn: #d1d4e0;
+    --btn-hover: #5c627c;
+    --accent: #e67e22;
+    --mic-active: #ff4757;
+    --audio-pulse: #3498db;
+}
+
+[data-theme="dark"] {
+    --bg: linear-gradient(135deg, #1a1a1c, #2d2d30);
+    --card-bg: #2c2e26;
+    --text: #e0e0e0;
+    --btn: #444;
+    --btn-hover: #666;
+}
+
 body {
     margin: 0;
     height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    background: linear-gradient(135deg, #878c9e, #444446);
-    font-family: Arial, sans-serif;
+    background: var(--bg);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    transition: 0.3s;
+    overflow: hidden;
 }
 
+/* SIDEBAR */
+#history-panel {
+    position: fixed;
+    left: 20px;
+    top: 20px;
+    bottom: 20px;
+    width: 180px;
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 15px;
+    color: white;
+    overflow-y: auto;
+    z-index: 100;
+}
+
+.history-item {
+    font-size: 13px;
+    padding: 8px;
+    background: rgba(0,0,0,0.2);
+    margin-bottom: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+/* LOFI PLAYER UI */
+#lofi-player {
+    position: fixed;
+    top: 20px;
+    left: 220px;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(5px);
+    padding: 10px 20px;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    color: white;
+    z-index: 100;
+}
+
+.volume-slider { width: 60px; height: 4px; cursor: pointer; }
+
 .scene {
-    width: 380px;
-    height: 300px;
-    perspective: 1000px;
+    width: 550px;
+    height: 720px;
+    perspective: 1500px;
 }
 
 .card {
@@ -26,11 +92,20 @@ body {
     height: 100%;
     position: relative;
     transform-style: preserve-3d;
-    transition: transform 0.8s;
+    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.card.flip {
-    transform: rotateY(180deg);
+.card.flip { transform: rotateY(180deg); }
+
+/* MUSIC PULSE EFFECT */
+.card.playing {
+    box-shadow: 0 0 20px var(--audio-pulse);
+    animation: bounce 2s infinite ease-in-out;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.01); }
 }
 
 .face {
@@ -38,131 +113,307 @@ body {
     width: 100%;
     height: 100%;
     backface-visibility: hidden;
-    border-radius: 14px;
-    background: #c7cfb0;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
-    padding: 20px;
+    border-radius: 30px;
+    background: var(--card-bg);
+    box-shadow: 0 30px 70px rgba(0,0,0,0.4);
+    padding: 35px;
     box-sizing: border-box;
-}
-
-.front {
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    color: var(--text);
 }
 
-.back {
-    transform: rotateY(180deg);
-    overflow-y: auto;
-}
+.front { justify-content: center; text-align: center; }
+.back { transform: rotateY(180deg); }
 
-h2 {
-    text-align: center;
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-top: 15px;
 }
 
 input {
-    padding: 10px;
-    font-size: 14px;
-    margin-top: 15px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-}
-
-button {
-    margin-top: 15px;
-    padding: 10px;
+    width: 100%;
+    padding: 14px 45px 14px 14px;
     font-size: 15px;
-    border: none;
-    border-radius: 6px;
-    background: #d1d4e0;
-    color: rgb(131, 105, 105);
-    cursor: pointer;
+    border-radius: 12px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
 }
 
-button:hover {
-    background: #5c627c;
+.mic-btn {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 22px;
 }
+
+.mic-btn.listening { color: var(--mic-active); animation: ring 1.5s infinite; }
+
+@keyframes ring { 0% { opacity:1; } 50% { opacity:0.3; } 100% { opacity:1; } }
 
 .output {
     font-size: 14px;
-    line-height: 1.5;
+    line-height: 1.6;
+    overflow-y: auto;
+    max-height: 180px;
+    margin-bottom: 10px;
+    background: rgba(255,255,255,0.1);
+    padding: 12px;
+    border-radius: 12px;
 }
 
-.back button {
-    background: #444;
+#topic-img {
+    width: 100%;
+    height: 110px;
+    object-fit: cover;
+    border-radius: 15px;
+    margin-bottom: 10px;
+    display: none;
 }
+
+.btn-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: auto;
+}
+
+button, select {
+    padding: 10px 5px;
+    font-size: 11px;
+    border: none;
+    border-radius: 8px;
+    background: var(--btn);
+    color: var(--text);
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.2s;
+}
+
+button:hover { background: var(--btn-hover); color: white; }
+
+#pomo-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    padding: 10px 25px;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    backdrop-filter: blur(8px);
+}
+
+.theme-toggle { position: fixed; top: 20px; right: 20px; }
+.simplify-btn { background: #9b59b6 !important; color: white !important; }
+
 </style>
 </head>
+<body data-theme="light">
 
-<body>
+<button class="theme-toggle" onclick="toggleTheme()">🌓 Theme</button>
+
+<div id="history-panel">
+    <h3>📚 Library</h3>
+    <div id="history-list"></div>
+</div>
+
+<div id="lofi-player">
+    <button onclick="toggleMusic()" style="background:none; color:white; font-size:18px;">🎵</button>
+    <span id="music-status">Study Beats</span>
+    <input type="range" class="volume-slider" min="0" max="1" step="0.1" value="0.5" onchange="updateVolume(this.value)">
+    <audio id="lofi-audio" loop>
+        <source src="https://stream.zeno.fm/f3wvbb76v0tuv" type="audio/mpeg">
+    </audio>
+</div>
+
+<div id="pomo-container">
+    <span id="pomo-display">25:00</span>
+    <button onclick="toggleTimer()" id="pomo-btn">▶</button>
+</div>
 
 <div class="scene">
     <div class="card" id="card">
 
-        <!-- FRONT SIDE -->
         <div class="face front">
-            <h2>🤖 AI Study Buddy</h2>
-            <p>Enter a topic</p>
-            <input type="text" id="topic" placeholder="e.g. Pointers in C">
-            <button onclick="explain()">Explain</button>
+            <h1 style="font-size: 3.5rem; margin: 0;">🎧</h1>
+            <h2>Grand Maestro AI</h2>
+            <p>The Ultimate Immersive Study Terminal</p>
+            
+            <div class="input-wrapper">
+                <input type="text" id="topic" placeholder="Voice or Type..." onkeypress="if(event.key=='Enter')explain()">
+                <button class="mic-btn" id="mic-btn" onclick="startVoiceSearch()">🎙️</button>
+            </div>
+            
+            <button onclick="explain()" style="background: var(--accent); color: white; padding: 18px; margin-top: 20px; font-size: 1.1rem; border-radius: 50px;">Consult the Archon</button>
         </div>
 
-        <!-- BACK SIDE -->
         <div class="face back">
-            <h2>📘 Explanation</h2>
+            <div id="qr-overlay" onclick="this.style.display='none'" style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:20; border-radius:30px; color:white;">
+                <div id="qrcode" style="background:white; padding:15px; border-radius:15px;"></div>
+                <p>Click to close</p>
+            </div>
+
+            <img id="topic-img" alt="Visual Insight">
+            <div id="roadmap" style="display:flex; flex-wrap:wrap; margin-bottom:5px;"></div>
             <div class="output" id="output"></div>
-            <button onclick="goBack()">Back</button>
+            
+            <textarea id="sticky-note" placeholder="✍️ Scholar's annotations..." style="width:100%; height:45px; font-size:11px; margin-top:5px; border-radius:8px; padding:8px; background:rgba(255,255,0,0.05); color:var(--text); border:1px dashed #999;"></textarea>
+
+            <div id="quiz-section" style="display:none; padding: 8px; background: rgba(0,0,0,0.05); border-radius: 12px; margin-top: 8px;">
+                <span id="quiz-q" style="font-size: 11px;"></span>
+                <input type="text" id="quiz-input" placeholder="?" style="width: 35%; height:20px; font-size:11px;">
+                <button onclick="checkQuiz()">Go</button>
+            </div>
+
+            <div class="btn-grid">
+                <button onclick="speak()">🔊 Listen</button>
+                <button onclick="startQuiz()">📝 Quiz</button>
+                <button onclick="toggleHighlight()">🖍️ Focus</button>
+                <button class="simplify-btn" onclick="simplifyText()">👶 ELI5</button>
+                <button onclick="downloadNote()">💾 Save</button>
+                <button onclick="showQR()" style="background:#27ae60; color:white;">📲 QR</button>
+                <select id="lang-select" onchange="changeLang()">
+                    <option value="en">🇺🇸 EN</option>
+                    <option value="es">🇪🇸 ES</option>
+                    <option value="zh">🇨🇳 ZH</option>
+                </select>
+                <button onclick="goBack()" style="background:#444; color:white;">← Back</button>
+            </div>
         </div>
 
     </div>
 </div>
 
 <script>
-async function explain() {
-    const topic = document.getElementById("topic").value.trim();
-    const output = document.getElementById("output");
+let currentData = "";
+let currentAnswer = "";
+let currentTitle = "";
+let timer = null;
+let timeLeft = 1500;
+const audio = document.getElementById("lofi-audio");
+
+// LOFI MUSIC LOGIC
+function toggleMusic() {
     const card = document.getElementById("card");
-
-    if (topic === "") {
-        alert("Enter a topic");
-        return;
+    if (audio.paused) {
+        audio.play();
+        card.classList.add("playing");
+        document.getElementById("music-status").innerText = "Playing Beats...";
+    } else {
+        audio.pause();
+        card.classList.remove("playing");
+        document.getElementById("music-status").innerText = "Lofi Paused";
     }
+}
+function updateVolume(val) { audio.volume = val; }
 
-    output.innerHTML = "🤖 Thinking...";
+// VOICE SEARCH
+function startVoiceSearch() {
+    if (!('webkitSpeechRecognition' in window)) return alert("Use Chrome!");
+    const rec = new webkitSpeechRecognition();
+    rec.onstart = () => document.getElementById('mic-btn').classList.add('listening');
+    rec.onend = () => document.getElementById('mic-btn').classList.remove('listening');
+    rec.onresult = (e) => { document.getElementById('topic').value = e.results[0][0].transcript; explain(); };
+    rec.start();
+}
 
-    // FLIP THE CARD
+async function explain(forcedTopic = null) {
+    const topic = forcedTopic || document.getElementById("topic").value.trim();
+    const output = document.getElementById("output");
+    const img = document.getElementById("topic-img");
+    const card = document.getElementById("card");
+    if (!topic) return;
+    output.innerHTML = "🎼 Syncing knowledge...";
+    document.getElementById("roadmap").innerHTML = "";
+    img.style.display = "none";
     card.classList.add("flip");
 
-    // Wikipedia API
-    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topic)}`;
-
     try {
-        const res = await fetch(url);
+        const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topic)}`);
         const data = await res.json();
-
-        if (!data.extract) {
-            output.innerHTML = "No explanation found. Try a different topic.";
-        } else {
-            output.innerHTML = `
-                <strong>${topic}</strong><br><br>
-                ${data.extract}
-                <br><br>
-                <small>Source: Wikipedia</small>
-            `;
+        if (data.extract) {
+            currentData = data.extract; currentTitle = data.title;
+            output.innerHTML = `<strong>${data.title}</strong><br><br>${data.extract}`;
+            if (data.thumbnail) { img.src = data.thumbnail.source; img.style.display = "block"; }
+            saveHistory(data.title);
+            const words = data.extract.split(' ').filter(w => w.length > 8).slice(0, 4);
+            words.forEach(w => {
+                const tag = document.createElement("span");
+                tag.innerText = w.replace(/[^\w]/g, "");
+                tag.style = "font-size:9px; background:rgba(0,0,0,0.1); padding:2px 6px; border-radius:10px; cursor:pointer; margin:2px;";
+                tag.onclick = () => explain(tag.innerText);
+                document.getElementById("roadmap").appendChild(tag);
+            });
         }
-    } catch {
-        output.innerHTML = "Error fetching data. Check internet connection.";
+    } catch { output.innerHTML = "Offline error."; }
+}
+
+function simplifyText() {
+    let simple = currentData.replace(/metabolize|infrastructure|equilibrium|proliferation/gi, "simple process");
+    document.getElementById("output").innerHTML = `<strong>${currentTitle} (ELI5)</strong><br><br>${simple}`;
+}
+
+function showQR() {
+    document.getElementById("qrcode").innerHTML = "";
+    new QRCode(document.getElementById("qrcode"), { text: `https://en.wikipedia.org/wiki/${encodeURIComponent(currentTitle)}`, width: 160, height: 160 });
+    document.getElementById("qr-overlay").style.display = "flex";
+}
+
+function startQuiz() {
+    const words = currentData.split(" ").filter(w => w.length > 8);
+    const ans = words[Math.floor(Math.random() * words.length)].replace(/[^\w]/g, "");
+    currentAnswer = ans.toLowerCase();
+    document.getElementById("quiz-q").innerText = `Fill: "... ${currentData.replace(new RegExp(ans, 'gi'), "_______").substring(0, 40)} ..."`;
+    document.getElementById("quiz-section").style.display = "block";
+}
+
+function checkQuiz() {
+    const input = document.getElementById("quiz-input").value.toLowerCase().trim();
+    alert(input === currentAnswer ? "🎯 Harmonic Mastery!" : "Oops: " + currentAnswer);
+}
+
+function toggleTimer() {
+    const btn = document.getElementById("pomo-btn");
+    if (timer) { clearInterval(timer); timer = null; btn.innerText = "▶"; }
+    else {
+        btn.innerText = "⏸";
+        timer = setInterval(() => {
+            timeLeft--;
+            document.getElementById("pomo-display").innerText = `${Math.floor(timeLeft/60)}:${(timeLeft%60).toString().padStart(2, '0')}`;
+            if (timeLeft <= 0) { clearInterval(timer); alert("Focus period complete!"); timeLeft = 1500; }
+        }, 1000);
     }
 }
 
-function goBack() {
-    document.getElementById("card").classList.remove("flip");
+function toggleHighlight() {
+    document.getElementById("output").innerHTML = `<strong>${currentTitle}</strong><br><br>${currentData.replace(/\b(\w{9,})\b/g, '<mark>$1</mark>')}`;
 }
-</script>
 
+function downloadNote() {
+    const blob = new Blob([`Study Buddy Note\nTopic: ${currentTitle}\nSummary: ${currentData}\nNotes: ${document.getElementById('sticky-note').value}`], { type: "text/plain" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${currentTitle}_Note.txt`; a.click();
+}
+
+function speak() { window.speechSynthesis.speak(new SpeechSynthesisUtterance(currentData)); }
+
+function saveHistory(title) {
+    const list = document.getElementById("history-list");
+    if ([...list.children].some(c => c.innerText === title)) return;
+    const item = document.createElement("div");
+    item.className = "history-item"; item.innerText = title;
+    item.onclick = () => explain(title); list.prepend(item);
+}
+
+function toggleTheme() { document.body.setAttribute("data-theme", document.body.getAttribute("data-theme") === "light" ? "dark" : "light"); }
+
+function goBack() { window.speechSynthesis.cancel(); document.getElementById("card").classList.remove("flip"); }
+</script>
 </body>
 </html>
-
-
-
-
